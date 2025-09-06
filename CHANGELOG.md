@@ -3,7 +3,7 @@
 ### Changes
 - [v2.2.0] Chore/new changelog
 Briefly describe what has been changed and why.
-One more record
+One more record and
 
 
 ## v2.1.0 (2025-09-06)
