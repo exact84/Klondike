@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-          persist-credentials: false  # отключаем автоматический токен
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -56,9 +56,20 @@ jobs:
           pr_body="${{ github.event.pull_request.body }}"
           version=$(jq -r .version package.json)
 
-          # Извлекаем описание из секции ## Description
+          # Extracting the "## Description" section
           description=$(echo "$pr_body" | awk '/## Description/{flag=1; next} /##/{flag=0} flag' | sed '/^$/d')
 
+          # Remove old block with the same version, if exists
+          if grep -q "## v$version" CHANGELOG.md; then
+            awk -v ver="## v$version" '
+              BEGIN {skip=0}
+              $0 ~ ver {skip=1; next}
+              skip && $0 ~ /^## / {skip=0}
+              !skip {print}
+            ' CHANGELOG.md > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
+          fi
+
+          # Add new block on top
           tmp_file=$(mktemp)
           {
             echo "## v$version"
@@ -73,7 +84,6 @@ jobs:
             echo ""
             cat CHANGELOG.md
           } > "$tmp_file"
-
           mv "$tmp_file" CHANGELOG.md
 
       - name: Commit changes
@@ -83,19 +93,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Подменяем remote URL для пуша через токен
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
 
-          # Подтягиваем последние изменения PR
           git fetch origin
           git pull --rebase origin ${{ github.head_ref }} || git rebase --abort || git pull --strategy=ours origin ${{ github.head_ref }}
 
-          # Добавляем файлы после всех изменений
           git add CHANGELOG.md
           [ -f package.json ] && git add package.json
           [ -f package-lock.json ] && git add package-lock.json
 
-          # Коммитим только если есть изменения
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
