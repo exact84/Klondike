@@ -45,6 +45,16 @@ jobs:
           npx npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
           echo "New version after bump: $(jq -r .version package.json)"
 
+      - name: Prepare PR title with version
+        id: pr_title
+        run: |
+          version=$(jq -r .version package.json)
+          old_title="${{ github.event.pull_request.title }}"
+          # убираем старый префикс [vX.Y.Z] если он есть
+          clean_title=$(echo "$old_title" | sed -E 's/^\[v[0-9]+\.[0-9]+\.[0-9]+\]\s*//')
+          new_title="[v$version] $clean_title"
+          echo "new_title=$new_title" >> $GITHUB_OUTPUT
+
       - name: Update CHANGELOG.md
         run: |
           if [ ! -f CHANGELOG.md ]; then
@@ -52,24 +62,13 @@ jobs:
             echo "" >> CHANGELOG.md
           fi
 
-          pr_title="${{ github.event.pull_request.title }}"
+          pr_title="${{ steps.pr_title.outputs.new_title }}"
           pr_body="${{ github.event.pull_request.body }}"
           version=$(jq -r .version package.json)
 
-          # Extracting the "## Description" section
+          # Extract "## Description" section
           description=$(echo "$pr_body" | awk '/## Description/{flag=1; next} /##/{flag=0} flag' | sed '/^$/d')
 
-          # Remove old block with the same version, if exists
-          if grep -q "## v$version" CHANGELOG.md; then
-            awk -v ver="## v$version" '
-              BEGIN {skip=0}
-              $0 ~ ver {skip=1; next}
-              skip && $0 ~ /^## / {skip=0}
-              !skip {print}
-            ' CHANGELOG.md > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
-          fi
-
-          # Add new block on top
           tmp_file=$(mktemp)
           {
             echo "## v$version"
@@ -84,6 +83,7 @@ jobs:
             echo ""
             cat CHANGELOG.md
           } > "$tmp_file"
+
           mv "$tmp_file" CHANGELOG.md
 
       - name: Commit changes
@@ -116,12 +116,12 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const version = require('./package.json').version
-            const oldTitle = context.payload.pull_request.title
-            const newTitle = `[v${version}] ${oldTitle.replace(/^\[v[0-9]+\.[0-9]+\.[0-9]+\]\s*/, '')}`
+            const newTitle = process.env.NEW_TITLE
             await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.payload.pull_request.number,
               title: newTitle
             })
+        env:
+          NEW_TITLE: ${{ steps.pr_title.outputs.new_title }}
