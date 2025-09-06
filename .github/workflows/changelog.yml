@@ -11,17 +11,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
-            ref: ${{ github.head_ref }}
+          ref: ${{ github.head_ref }}
+          persist-credentials: false  # отключаем автоматический токен
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install jq for processing and analyzing JSON data
+      - name: Install jq
         run: sudo apt-get install -y jq
 
       - name: Detect bump type
@@ -43,8 +44,6 @@ jobs:
           echo "Current version before bump: $(jq -r .version package.json)"
           npx npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
           echo "New version after bump: $(jq -r .version package.json)"
-          git add package.json package-lock.json || true
-          git status
 
       - name: Update CHANGELOG.md
         run: |
@@ -57,7 +56,7 @@ jobs:
           pr_body="${{ github.event.pull_request.body }}"
           version=$(jq -r .version package.json)
 
-          # Извлекаем только раздел ## Description
+          # Извлекаем описание из секции ## Description
           description=$(echo "$pr_body" | awk '/## Description/{flag=1; next} /##/{flag=0} flag' | sed '/^$/d')
 
           tmp_file=$(mktemp)
@@ -77,15 +76,6 @@ jobs:
 
           mv "$tmp_file" CHANGELOG.md
 
-      - name: Debug info
-        run: |
-          echo "Repository: ${{ github.repository }}"
-          echo "Head ref: ${{ github.head_ref }}"
-          echo "Current branch: $(git branch --show-current)"
-          git status
-          git log --oneline -n 5
-          git remote -v
-
       - name: Commit changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -93,38 +83,25 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Добавляем все изменения перед pull
-          git add CHANGELOG.md
-          [ -f package.json ] && git add package.json && echo "Added package.json"
-          [ -f package-lock.json ] && git add package-lock.json && echo "Added package-lock.json"
+          # Подменяем remote URL для пуша через токен
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
 
-          # Коммитим изменения, если они есть
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: stage changes before pull [skip ci]"
-          fi
-
-          # Подтягиваем последние изменения из ветки
+          # Подтягиваем последние изменения PR
           git fetch origin
-          git pull --rebase origin ${{ github.head_ref }} || {
-            echo "Rebase failed, attempting to resolve conflicts with --strategy=ours"
-            git rebase --abort || true
-            git pull --strategy=ours origin ${{ github.head_ref }}
-          }
+          git pull --rebase origin ${{ github.head_ref }} || git rebase --abort || git pull --strategy=ours origin ${{ github.head_ref }}
 
-          # Повторно добавляем файлы после pull, на случай изменений
+          # Добавляем файлы после всех изменений
           git add CHANGELOG.md
           [ -f package.json ] && git add package.json
           [ -f package-lock.json ] && git add package-lock.json
 
-          # Проверяем, есть ли изменения для коммита
+          # Коммитим только если есть изменения
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
 
           git commit -m "chore: bump version & update changelog [skip ci]"
-
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
 
           git push origin HEAD:${{ github.head_ref }}
 
