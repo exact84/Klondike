@@ -51,14 +51,19 @@ jobs:
           pr_body="${{ github.event.pull_request.body }}"
           version=$(jq -r .version package.json)
 
+          # Извлекаем только раздел ## Description
+          description=$(echo "$pr_body" | awk '/## Description/{flag=1; next} /##/{flag=0} flag' | sed '/^$/d')
+
           tmp_file=$(mktemp)
           {
             echo "## v$version"
             echo ""
             echo "### Changes"
             echo "- $pr_title"
-            if [ -n "$pr_body" ]; then
-              echo "  $pr_body"
+            if [ -n "$description" ]; then
+              echo "  $description"
+            else
+              echo "  No description provided"
             fi
             echo ""
             cat CHANGELOG.md
