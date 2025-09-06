@@ -1,6 +1,6 @@
 {
   "name": "klondike",
-  "version": "2.0.1",
+  "version": "2.2.0",
   "description": "Training project for klondike game info",
   "main": "index.js",
   "scripts": {

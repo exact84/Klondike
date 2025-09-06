@@ -1,0 +1,24 @@
+name: "Bug report"
+description: Report a bug
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: What happened?
+      placeholder: Short description
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: 1. ...\n2. ...\n3. ...
+    validations:
+      required: true
+  - type: input
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What should happen?

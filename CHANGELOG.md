@@ -1,25 +1,19 @@
-## v2.0.1
+## v2.2.0 (2025-09-06)
 
 ### Changes
-- [v2.0.1] Chore/ci cd test Patch Version
+- [v2.2.0] Chore/new changelog
 Briefly describe what has been changed and why.
-Новая Patch версия 
+One more record
+And same record
+Add blank issues
 
 
-## v2.0.0
-
-### Changes
-- [v2.0.0] Chore/ci cd test With new version
-Add new Major version.
-Версия №2.
-Новые данные.
-
-
-## v1.1.0
+## v2.1.0 (2025-09-06)
 
 ### Changes
-- Chore/ci cd test 4
-Briefly describe what has been changed and why. 2
-
-
-# Changelog
+- [v2.1.0] test: remove changelog
+Briefly describe what has been changed and why.
+New Changelog.md
+Add current date
+Add small changes
+Determine last record in changelog and delete whole block

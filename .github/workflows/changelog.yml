@@ -65,13 +65,22 @@ jobs:
           pr_title="${{ steps.pr_title.outputs.new_title }}"
           pr_body="${{ github.event.pull_request.body }}"
           version=$(jq -r .version package.json)
+          date=$(date +'%Y-%m-%d')
 
           # Extract "## Description" section
           description=$(echo "$pr_body" | awk '/## Description/{flag=1; next} /##/{flag=0} flag' | sed '/^$/d')
 
+          awk -v v="$version" '
+            BEGIN {skip=0}
+            $0 ~ ("^## v" v) {skip=1; next}
+            skip && $0 ~ /^## / {skip=0}
+            !skip {print}
+          ' CHANGELOG.md > CHANGELOG.clean.tmp || true
+          mv CHANGELOG.clean.tmp CHANGELOG.md
+
           tmp_file=$(mktemp)
           {
-            echo "## v$version"
+            echo "## v$version ($date)"
             echo ""
             echo "### Changes"
             echo "- $pr_title"
@@ -83,7 +92,6 @@ jobs:
             echo ""
             cat CHANGELOG.md
           } > "$tmp_file"
-
           mv "$tmp_file" CHANGELOG.md
 
       - name: Commit changes
