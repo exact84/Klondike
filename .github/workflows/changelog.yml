@@ -11,15 +11,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout PR branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install jq for processing and analyzing JSON data
+      - name: Install jq
         run: sudo apt-get install -y jq
 
       - name: Detect bump type
@@ -38,7 +41,19 @@ jobs:
       - name: Bump version (only on opened)
         if: github.event.action == 'opened'
         run: |
+          echo "Current version before bump: $(jq -r .version package.json)"
           npx npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
+          echo "New version after bump: $(jq -r .version package.json)"
+
+      - name: Prepare PR title with version
+        id: pr_title
+        run: |
+          version=$(jq -r .version package.json)
+          old_title="${{ github.event.pull_request.title }}"
+          # убираем старый префикс [vX.Y.Z] если он есть
+          clean_title=$(echo "$old_title" | sed -E 's/^\[v[0-9]+\.[0-9]+\.[0-9]+\]\s*//')
+          new_title="[v$version] $clean_title"
+          echo "new_title=$new_title" >> $GITHUB_OUTPUT
 
       - name: Update CHANGELOG.md
         run: |
@@ -47,11 +62,11 @@ jobs:
             echo "" >> CHANGELOG.md
           fi
 
-          pr_title="${{ github.event.pull_request.title }}"
+          pr_title="${{ steps.pr_title.outputs.new_title }}"
           pr_body="${{ github.event.pull_request.body }}"
           version=$(jq -r .version package.json)
 
-          # Извлекаем только раздел ## Description
+          # Extract "## Description" section
           description=$(echo "$pr_body" | awk '/## Description/{flag=1; next} /##/{flag=0} flag' | sed '/^$/d')
 
           tmp_file=$(mktemp)
@@ -61,24 +76,15 @@ jobs:
             echo "### Changes"
             echo "- $pr_title"
             if [ -n "$description" ]; then
-              echo "  $description"
+              echo "$description"
             else
-              echo "  No description provided"
+              echo "No description provided"
             fi
             echo ""
             cat CHANGELOG.md
           } > "$tmp_file"
 
           mv "$tmp_file" CHANGELOG.md
-
-      - name: Debug info
-        run: |
-          echo "Repository: ${{ github.repository }}"
-          echo "Head ref: ${{ github.head_ref }}"
-          echo "Current branch: $(git branch --show-current)"
-          git status
-          git log --oneline -n 5
-          git remote -v
 
       - name: Commit changes
         env:
@@ -87,13 +93,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Подтягиваем последние изменения из ветки
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
+
           git fetch origin
-          git pull --rebase origin ${{ github.head_ref }} || {
-            echo "Rebase failed, attempting to resolve conflicts"
-            git rebase --abort
-            git pull --strategy=ours origin ${{ github.head_ref }}
-          }
+          git pull --rebase origin ${{ github.head_ref }} || git rebase --abort || git pull --strategy=ours origin ${{ github.head_ref }}
 
           git add CHANGELOG.md
           [ -f package.json ] && git add package.json
@@ -106,8 +109,6 @@ jobs:
 
           git commit -m "chore: bump version & update changelog [skip ci]"
 
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
-
           git push origin HEAD:${{ github.head_ref }}
 
       - name: Update PR title with version
@@ -115,12 +116,12 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const version = require('./package.json').version
-            const oldTitle = context.payload.pull_request.title
-            const newTitle = `[v${version}] ${oldTitle.replace(/^\[v[0-9]+\.[0-9]+\.[0-9]+\]\s*/, '')}`
+            const newTitle = process.env.NEW_TITLE
             await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.payload.pull_request.number,
               title: newTitle
             })
+        env:
+          NEW_TITLE: ${{ steps.pr_title.outputs.new_title }}
