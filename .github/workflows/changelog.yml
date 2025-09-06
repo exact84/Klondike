@@ -77,9 +77,9 @@ jobs:
             echo "### Changes"
             echo "- $pr_title"
             if [ -n "$description" ]; then
-              echo "  $description"
+              echo "$description"
             else
-              echo "  No description provided"
+              echo "No description provided"
             fi
             echo ""
             cat CHANGELOG.md
