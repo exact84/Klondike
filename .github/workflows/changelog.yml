@@ -65,20 +65,21 @@ jobs:
           pr_title="${{ steps.pr_title.outputs.new_title }}"
           pr_body="${{ github.event.pull_request.body }}"
           version=$(jq -r .version package.json)
+          date=$(date +'%Y-%m-%d')
 
           # Extract "## Description" section
           description=$(echo "$pr_body" | awk '/## Description/{flag=1; next} /##/{flag=0} flag' | sed '/^$/d')
 
           tmp_file=$(mktemp)
           {
-            echo "## v$version"
+            echo "## v$version ($date)"
             echo ""
             echo "### Changes"
             echo "- $pr_title"
             if [ -n "$description" ]; then
-              echo "$description"
+              echo "  $description"
             else
-              echo "No description provided"
+              echo "  No description provided"
             fi
             echo ""
             cat CHANGELOG.md
