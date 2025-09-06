@@ -70,8 +70,13 @@ jobs:
           # Extract "## Description" section
           description=$(echo "$pr_body" | awk '/## Description/{flag=1; next} /##/{flag=0} flag' | sed '/^$/d')
 
-          # Delete old block
-          sed -i "/^## v$version/d" CHANGELOG.md
+          awk -v v="$version" '
+            BEGIN {skip=0}
+            $0 ~ ("^## v" v) {skip=1; next}
+            skip && $0 ~ /^## / {skip=0}
+            !skip {print}
+          ' CHANGELOG.md > CHANGELOG.clean.tmp || true
+          mv CHANGELOG.clean.tmp CHANGELOG.md
 
           tmp_file=$(mktemp)
           {
@@ -80,14 +85,13 @@ jobs:
             echo "### Changes"
             echo "- $pr_title"
             if [ -n "$description" ]; then
-              echo "  $description"
+              echo "$description"
             else
-              echo "  No description provided"
+              echo "No description provided"
             fi
             echo ""
             cat CHANGELOG.md
           } > "$tmp_file"
-
           mv "$tmp_file" CHANGELOG.md
 
       - name: Commit changes
