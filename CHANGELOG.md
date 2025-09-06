@@ -7,5 +7,3 @@ New Changelog.md
 Add current date
 Add small changes
 Determine last record in changelog and delete whole block
-
-
