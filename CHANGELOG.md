@@ -1,3 +1,11 @@
+## v2.0.1
+
+### Changes
+- [v2.0.1] Chore/ci cd test Patch Version
+Briefly describe what has been changed and why.
+Новая Patch версия 
+
+
 ## v2.0.0
 
 ### Changes
