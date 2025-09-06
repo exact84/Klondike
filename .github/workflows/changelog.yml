@@ -1,0 +1,77 @@
+name: Version & Changelog
+
+on:
+  pull_request:
+    types: [opened, edited]
+
+jobs:
+  version-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install jq for processing and analyzing JSON data
+        run: sudo apt-get install -y jq
+
+      - name: Detect bump type
+        id: bump
+        run: |
+          labels='${{ toJson(github.event.pull_request.labels) }}'
+          echo "Labels: $labels"
+          if echo "$labels" | jq -e '.[] | select(.name=="major")' >/dev/null; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif echo "$labels" | jq -e '.[] | select(.name=="patch")' >/dev/null; then
+            echo "type=patch" >> $GITHUB_OUTPUT
+          else
+            echo "type=minor" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version (only on opened)
+        if: github.event.action == 'opened'
+        run: |
+          npx npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
+
+      - name: Update CHANGELOG
+        run: |
+          title="${{ github.event.pull_request.title }}"
+          body="${{ github.event.pull_request.body }}"
+          version=$(node -p "require('./package.json').version")
+          {
+            echo "## v$version"
+            echo ""
+            echo "### $title"
+            echo "$body"
+            echo ""
+            cat CHANGELOG.md
+          } > CHANGELOG.tmp
+          mv CHANGELOG.tmp CHANGELOG.md
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json CHANGELOG.md || true
+          git commit -m "chore: bump version & update changelog [skip ci]" || echo "No changes"
+          git push
+
+      - name: Update PR title with version
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const version = require('./package.json').version
+            const oldTitle = context.payload.pull_request.title
+            const newTitle = `[v${version}] ${oldTitle.replace(/^\[v[0-9]+\.[0-9]+\.[0-9]+\]\s*/, '')}`
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              title: newTitle
+            })
