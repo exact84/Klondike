@@ -1,0 +1,15 @@
+{
+  "name": "klondike",
+  "version": "1.0.0",
+  "description": "Training project for klondike game info",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "Klondike"
+  },
+  "author": "Alexey Exact",
+  "license": "MIT"
+}

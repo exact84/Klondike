@@ -1,0 +1,126 @@
+name: Version & Changelog
+
+on:
+  pull_request:
+    types: [opened, edited]
+    branches:
+      - dev
+
+jobs:
+  version-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install jq for processing and analyzing JSON data
+        run: sudo apt-get install -y jq
+
+      - name: Detect bump type
+        id: bump
+        run: |
+          labels='${{ toJson(github.event.pull_request.labels) }}'
+          echo "Labels: $labels"
+          if echo "$labels" | jq -e '.[] | select(.name=="major")' >/dev/null; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif echo "$labels" | jq -e '.[] | select(.name=="patch")' >/dev/null; then
+            echo "type=patch" >> $GITHUB_OUTPUT
+          else
+            echo "type=minor" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version (only on opened)
+        if: github.event.action == 'opened'
+        run: |
+          npx npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
+
+      - name: Update CHANGELOG.md
+        run: |
+          if [ ! -f CHANGELOG.md ]; then
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+          fi
+
+          pr_title="${{ github.event.pull_request.title }}"
+          pr_body="${{ github.event.pull_request.body }}"
+          version=$(jq -r .version package.json)
+
+          # Извлекаем только раздел ## Description
+          description=$(echo "$pr_body" | awk '/## Description/{flag=1; next} /##/{flag=0} flag' | sed '/^$/d')
+
+          tmp_file=$(mktemp)
+          {
+            echo "## v$version"
+            echo ""
+            echo "### Changes"
+            echo "- $pr_title"
+            if [ -n "$description" ]; then
+              echo "  $description"
+            else
+              echo "  No description provided"
+            fi
+            echo ""
+            cat CHANGELOG.md
+          } > "$tmp_file"
+
+          mv "$tmp_file" CHANGELOG.md
+
+      - name: Debug info
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Head ref: ${{ github.head_ref }}"
+          echo "Current branch: $(git branch --show-current)"
+          git status
+          git log --oneline -n 5
+          git remote -v
+
+      - name: Commit changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Подтягиваем последние изменения из ветки
+          git fetch origin
+          git pull --rebase origin ${{ github.head_ref }} || {
+            echo "Rebase failed, attempting to resolve conflicts"
+            git rebase --abort
+            git pull --strategy=ours origin ${{ github.head_ref }}
+          }
+
+          git add CHANGELOG.md
+          [ -f package.json ] && git add package.json
+          [ -f package-lock.json ] && git add package-lock.json
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore: bump version & update changelog [skip ci]"
+
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
+
+          git push origin HEAD:${{ github.head_ref }}
+
+      - name: Update PR title with version
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const version = require('./package.json').version
+            const oldTitle = context.payload.pull_request.title
+            const newTitle = `[v${version}] ${oldTitle.replace(/^\[v[0-9]+\.[0-9]+\.[0-9]+\]\s*/, '')}`
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              title: newTitle
+            })
