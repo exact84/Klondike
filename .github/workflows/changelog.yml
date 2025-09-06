@@ -38,7 +38,11 @@ jobs:
       - name: Bump version (only on opened)
         if: github.event.action == 'opened'
         run: |
+          echo "Current version before bump: $(jq -r .version package.json)"
           npx npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
+          echo "New version after bump: $(jq -r .version package.json)"
+          git add package.json package-lock.json || true
+          git status
 
       - name: Update CHANGELOG.md
         run: |
@@ -87,18 +91,30 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          # Добавляем все изменения перед pull
+          git add CHANGELOG.md
+          [ -f package.json ] && git add package.json && echo "Added package.json"
+          [ -f package-lock.json ] && git add package-lock.json && echo "Added package-lock.json"
+
+          # Коммитим изменения, если они есть
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: stage changes before pull [skip ci]"
+          fi
+
           # Подтягиваем последние изменения из ветки
           git fetch origin
           git pull --rebase origin ${{ github.head_ref }} || {
-            echo "Rebase failed, attempting to resolve conflicts"
-            git rebase --abort
+            echo "Rebase failed, attempting to resolve conflicts with --strategy=ours"
+            git rebase --abort || true
             git pull --strategy=ours origin ${{ github.head_ref }}
           }
 
+          # Повторно добавляем файлы после pull, на случай изменений
           git add CHANGELOG.md
           [ -f package.json ] && git add package.json
           [ -f package-lock.json ] && git add package-lock.json
 
+          # Проверяем, есть ли изменения для коммита
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
