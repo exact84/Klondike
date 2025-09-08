@@ -1,0 +1,112 @@
+name: Update Checklist Progress
+
+on:
+  issues:
+    types: [opened, edited]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to update (for manual runs)'
+        required: false
+
+permissions:
+  issues: write
+
+jobs:
+  update-progress:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update checklist progress in sections and overall
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber =
+              github.context?.inputs?.issue_number ||   // manual run
+              context.payload?.issue?.number ||          // issues evevnt
+              1; // default issue number
+
+            if (!issueNumber) return;
+
+            console.log('Repo:', context.repo);
+            console.log('Issue number:', issueNumber);
+            console.log('Token starts with:', process.env.GITHUB_TOKEN?.slice(0, 5));
+
+            console.log('Using issue number:', issueNumber);
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const { data: issue } = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: issueNumber
+            });
+            let body = issue.body || '';
+
+            // Function to calculate checkboxes: - [ ] ... (20 pts). Checkboxes and points must be on the same line!
+            function calculateProgress(text) {
+              const lineRegex = /^[ \t]*- \[( |x|X)\][^\n]*\((\d+)\)/gm;
+              const matches = [...text.matchAll(lineRegex)];
+              let totalTasks = 0, doneTasks = 0, totalPoints = 0, donePoints = 0;
+
+              for (const m of matches) {
+                totalTasks++;
+                const checked = m[1].toLowerCase() === 'x';
+                const pts = parseInt(m[2], 10) || 0;
+                totalPoints += pts;
+                if (checked) {
+                  doneTasks++;
+                  donePoints += pts;
+                }
+              }
+              return { totalTasks, doneTasks, totalPoints, donePoints };
+            }
+
+            // Update progress within sections
+            const sectionRegex = /(## [^\n]+?\n)([\s\S]*?)(?=(\n## |\n$))/g;
+            body = body.replace(sectionRegex, (match, header, sectionBody) => {
+              const progress = calculateProgress(sectionBody);
+
+              // Replace existing line **Progress: …**
+              const newProgressLine = `**Progress: ${progress.doneTasks}/${progress.totalTasks} (${progress.donePoints}/${progress.totalPoints} pts)**`;
+              if (sectionBody.includes('**Progress:')) {
+                sectionBody = sectionBody.replace(/\*\*Progress:.*?\*\*/g, newProgressLine);
+              }
+
+              return header + sectionBody;
+            });
+
+            // Owerall progress
+            const overallProgress = calculateProgress(body);
+            if (overallProgress.totalTasks > 0) {
+              const filledCount = Math.round((overallProgress.doneTasks / overallProgress.totalTasks) * 20);
+              const filled = '█'.repeat(Math.min(Math.max(filledCount, 0), 20));
+              const empty = '░'.repeat(20 - filled.length);
+              const bar = filled + empty;
+
+              const overallBlock =
+                '<!-- CHECKLIST_PROGRESS_START -->\n' +
+                `**Progress:** ${overallProgress.doneTasks}/${overallProgress.totalTasks} (${overallProgress.donePoints}/${overallProgress.totalPoints} pts)\n` +
+                bar + '\n' +
+                '<!-- CHECKLIST_PROGRESS_END -->\n\n';
+
+              // Delete old progreee block and insert new
+              body = body.replace(/<!-- CHECKLIST_PROGRESS_START -->[\s\S]*?<!-- CHECKLIST_PROGRESS_END -->\n*/m, '');
+              body = overallBlock + body;
+            } else {
+              // Delete old progreee block
+              body = body.replace(/<!-- CHECKLIST_PROGRESS_START -->[\s\S]*?<!-- CHECKLIST_PROGRESS_END -->\n*/m, '');
+            }
+
+            if (newBody.trim() === issue.body.trim()) {
+              console.log('No changes to update.');
+              return;
+            }
+
+            await github.rest.issues.update({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              body: newBody
+            });
+
+            console.log('Checklist progress updated successfully.');
