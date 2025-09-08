@@ -1,3 +1,9 @@
+## v2.8.0 (2025-09-08)
+
+### Changes
+- [v2.8.0] test: For second PR
+test: For second PR
+
 ## v2.5.0 (2025-09-08)
 
 ### Changes

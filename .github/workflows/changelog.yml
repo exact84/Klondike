@@ -19,7 +19,9 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch all tags
-        run: git fetch --tags origin
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git fetch --tags origin
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -140,7 +142,7 @@ jobs:
       - name: Create and push git tag
         if: github.event.action == 'opened'
         run: |
-          // To avoid a race condition, we need to fetch the tags first
+          # To avoid a race condition, we need to fetch the tags first
           version="${{ steps.bump_version.outputs.version }}"
           git fetch --tags origin
           if git rev-parse "v$version" >/dev/null 2>&1; then
