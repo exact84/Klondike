@@ -1,7 +1,6 @@
 name: "Feature request"
 description: Suggest a new feature
 title: "[FEATURE]: "
-labels: ["enhancement"]
 body:
   - type: input
     id: summary
@@ -13,5 +12,5 @@ body:
   - type: textarea
     id: motivation
     attributes:
-      label: Why is this needed?
+      label: Additional information
       placeholder: Describe the problem or motivation
