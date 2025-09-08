@@ -44,7 +44,7 @@ jobs:
 
             // Function to calculate checkboxes: - [ ] ... (20 pts). Checkboxes and points must be on the same line!
             function calculateProgress(text) {
-              const lineRegex = /^[ \t]*- \[( |x|X)\][^\n]*\((\d+)\)/gm;
+              const lineRegex = /^[ \t]*- \[( |x|X)\]/gm;
               const matches = [...text.matchAll(lineRegex)];
               let totalTasks = 0, doneTasks = 0, totalPoints = 0, donePoints = 0;
 
@@ -98,6 +98,7 @@ jobs:
             }
 
             if (body.trim() === issue.body.trim()) {
+
               console.log('No changes to update.');
               return;
             }
@@ -106,7 +107,7 @@ jobs:
               owner,
               repo,
               issue_number: issueNumber,
-              body: newBody
+              body: body
             });
 
             console.log('Checklist progress updated successfully.');
