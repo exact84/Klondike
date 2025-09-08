@@ -1,3 +1,10 @@
+## v2.6.0 (2025-09-08)
+
+### Changes
+- [v2.6.0] Test/test2
+change tag version
+
+
 ## v2.5.0 (2025-09-08)
 
 ### Changes
