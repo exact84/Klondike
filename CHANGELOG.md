@@ -1,3 +1,11 @@
+## v2.5.0 (2025-09-08)
+
+### Changes
+- [v2.5.0] test: Increase version 2.4
+Briefly describe what has been changed and why.
+Increase 2.4 version
+
+
 ## v2.4.0 (2025-09-08)
 
 ### Changes
