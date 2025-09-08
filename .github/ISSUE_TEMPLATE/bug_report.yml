@@ -14,7 +14,7 @@ body:
     id: steps
     attributes:
       label: Steps to reproduce
-      placeholder: 1. ...\n2. ...\n3. ...
+      placeholder: 1. ... 
     validations:
       required: true
   - type: input
