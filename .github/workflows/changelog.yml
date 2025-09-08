@@ -16,6 +16,10 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: git fetch --tags origin
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -40,17 +44,33 @@ jobs:
 
       - name: Bump version (only on opened)
         if: github.event.action == 'opened'
+        id: bump_version
         run: |
-          echo "Current version before bump: $(jq -r .version package.json)"
-          npx npm version ${{ steps.bump.outputs.type }} --no-git-tag-version
-          echo "New version after bump: $(jq -r .version package.json)"
+          latest_tag=$(git tag --list "v*" | sort -V | tail -n1)
+          if [ -z "$latest_tag" ]; then
+            latest_tag="v0.0.0"
+          fi
+          echo "Latest tag: $latest_tag"
+
+          type="${{ steps.bump.outputs.type }}"
+          IFS='.' read -r major minor patch <<<"${latest_tag#v}"
+          case "$type" in
+            major) major=$((major+1)); minor=0; patch=0 ;;
+            minor) minor=$((minor+1)); patch=0 ;;
+            patch) patch=$((patch+1)) ;;
+          esac
+          new_version="v$major.$minor.$patch"
+          echo "Next version: $new_version"
+          echo "version=${new_version#v}" >> $GITHUB_OUTPUT
+
+          jq ".version=\"${new_version#v}\"" package.json > package.tmp.json
+          mv package.tmp.json package.json
 
       - name: Prepare PR title with version
         id: pr_title
         run: |
-          version=$(jq -r .version package.json)
+          version="${{ steps.bump_version.outputs.version }}"
           old_title="${{ github.event.pull_request.title }}"
-          # убираем старый префикс [vX.Y.Z] если он есть
           clean_title=$(echo "$old_title" | sed -E 's/^\[v[0-9]+\.[0-9]+\.[0-9]+\]\s*//')
           new_title="[v$version] $clean_title"
           echo "new_title=$new_title" >> $GITHUB_OUTPUT
@@ -64,10 +84,9 @@ jobs:
 
           pr_title="${{ steps.pr_title.outputs.new_title }}"
           pr_body="${{ github.event.pull_request.body }}"
-          version=$(jq -r .version package.json)
+          version="${{ steps.bump_version.outputs.version }}"
           date=$(date +'%Y-%m-%d')
 
-          # Extract "## Description" section
           description=$(echo "$pr_body" | awk '/## Description/{flag=1; next} /##/{flag=0} flag' | sed '/^$/d')
 
           awk -v v="$version" '
@@ -116,8 +135,20 @@ jobs:
           fi
 
           git commit -m "chore: bump version & update changelog [skip ci]"
-
           git push origin HEAD:${{ github.head_ref }}
+
+      - name: Create and push git tag
+        if: github.event.action == 'opened'
+        run: |
+          // To avoid a race condition, we need to fetch the tags first
+          version="${{ steps.bump_version.outputs.version }}"
+          git fetch --tags origin
+          if git rev-parse "v$version" >/dev/null 2>&1; then
+            echo "Tag v$version already exists, skipping"
+          else
+            git tag "v$version"
+            git push origin "v$version"
+          fi
 
       - name: Update PR title with version
         uses: actions/github-script@v7
