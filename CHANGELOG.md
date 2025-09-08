@@ -1,3 +1,10 @@
+## v2.4.0 (2025-09-08)
+
+### Changes
+- [v2.4.0] add update-issue pipeline
+add update-issue pipeline
+
+
 ## v2.3.0 (2025-09-08)
 
 ### Changes
