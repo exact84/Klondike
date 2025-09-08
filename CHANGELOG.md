@@ -1,3 +1,10 @@
+## v2.3.0 (2025-09-08)
+
+### Changes
+- [v2.3.0] fix: Edit blank issues
+Edit blank issues
+
+
 ## v2.2.0 (2025-09-06)
 
 ### Changes
