@@ -1,3 +1,11 @@
+## v2.7.0 (2025-09-08)
+
+### Changes
+- [v2.7.0] Docs/self assesment
+- Add self-assesment table
+- fix changelog workflow
+
+
 ## v2.5.0 (2025-09-08)
 
 ### Changes
