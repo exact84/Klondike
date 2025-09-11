@@ -4,6 +4,15 @@
 - [v2.8.0] test: For second PR
 test: For second PR
 
+
+## v2.7.0 (2025-09-08)
+
+### Changes
+- [v2.7.0] Docs/self assesment
+ - Create self assesment table
+ - Fix changelog workflow
+
+
 ## v2.5.0 (2025-09-08)
 
 ### Changes
