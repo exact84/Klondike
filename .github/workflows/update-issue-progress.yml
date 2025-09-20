@@ -81,17 +81,20 @@ jobs:
 
             // Overall progress
             const overallProgress = calculateProgress(body);
-            const filledCount = Math.round((overallProgress.doneTasks / overallProgress.totalTasks) * 20);
-            const filled = '█'.repeat(Math.min(Math.max(filledCount,0),20));
-            const empty = '░'.repeat(20 - filled.length);
-            const bar = filled + empty;
+            let overallBlock = '';
 
-            const overallBlock =
-              '<!-- CHECKLIST_PROGRESS_START -->\n' +
-              `**Progress:** ${overallProgress.doneTasks}/${overallProgress.totalTasks} (${overallProgress.donePoints}/${overallProgress.totalPoints} pts)\n` +
-              bar + '\n' +
-              '<!-- CHECKLIST_PROGRESS_END -->\n\n';
+            if (overallProgress && overallProgress.totalTasks > 0) {
+              const filledCount = Math.round((overallProgress.doneTasks / overallProgress.totalTasks) * 20);
+              const filled = '█'.repeat(Math.min(Math.max(filledCount,0),20));
+              const empty = '░'.repeat(20 - filled.length);
+              const bar = filled + empty;
 
+              overallBlock =
+                '<!-- CHECKLIST_PROGRESS_START -->\n' +
+                `**Progress:** ${overallProgress.doneTasks}/${overallProgress.totalTasks} (${overallProgress.donePoints}/${overallProgress.totalPoints} pts)\n` +
+                bar + '\n' +
+                '<!-- CHECKLIST_PROGRESS_END -->\n\n';
+            }
             body = body.replace(/<!-- CHECKLIST_PROGRESS_START -->[\s\S]*?<!-- CHECKLIST_PROGRESS_END -->\n*/m, '');
             const newBody = overallBlock + body;
 
