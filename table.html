@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <table border="1" cellspacing="0" cellpadding="5">
+    <thead>
+        <tr>
+            <th>№</th>
+            <th>Area</th>
+            <th>Item</th>
+            <th>Points</th>
+            <th>Evidence</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>1A</td>
+            <td>Signals (Baseline)</td>
+            <td>1. MovieStore with signals: core state (filters, page, movies, loading, error), <br>
+2. 3+ computed values (canSearch, hasFilters, canPaginate, canGoBack), <br>
+effect for localStorage sync removed (не нужен для кнопки поиска), <br>
+2+ effect with clean-up (unsubscribe/teardown) that trigger a real side effect. In constructor MovieSearchFilter<br>
+3. 3 toSignal for HTTP (genres, languages, countries), <br>
+signal inputs via component methods, <br>
+4. Bridge RxJS ↔ Signals: convert 3+ Observables with toSignal (HTTP/realtime) and use the resulting signals in template/computed. (15 pts)<br>
+5. untracked usage in buildFiltersObject. <br>
+6. Signal queries (viewChild, contentChild) in 1+ component where it simplifies logic (focus/measure/portal). (5 pts)<br>
+7.Use untracked() or a custom equality in 1+ place to avoid extra updates; add a short code comment explaining why. (10 pts)</td>
+            <td>90</td>
+            <td>Code: src/app/pages/movies/services/movie-store.service.ts; <br>
+All points have also been implemented in movies/popular, movies/up-coming, movies/top-rated, movies/now-playing</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>1B</td>
+            <td>Signals (Quality)</td>
+            <td>Met 6/6 quality checks: <br>
+no loops in signals, <br>
+useful computeds, <br>
+clear boundaries (store isolated from component), <br>
+performance (no unnecessary recomputes, untracked), <br>
+simple API (methods for each filter), <br>
+unit test covers a computed/effect or a signals-based component;</td>
+            <td>60</td>
+            <td> - In fetchMovies, the previous request is canceled via this.currentReqSub.unsubscribe()<br>
+- In the effect for localStorage, the storage subscription is cleared via onCleanup<br>
+- canSearch() - the Search button is active only when filters are present<br>
+canPaginate() / canGoBack() - helps manage pagination buttons (if we decide to use them in the component)<br>
+genres / languages / countries - simplify access to API references. - MovieStore stores the state of filters, pages, and movie lists (signals).<br>
+RxJS is used only for API requests and is converted to signals via toSignal.<br>
+No state duplication (no signal and Subject for the same object).<br>
+- Unit test covers a computed/effect or a signals-based component;<br>
+- All @for statements have a track, untracked is used, and computed statements do not depend on external signals.<br>
+README section “Why Signals, short rationale”</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>Routing & Navigation</td>
+            <td>Functional routes with lazy loadComponent - 25 pts<br>
+Guards/resolvers with typed data - 20 pts<br>
+withComponentInputBinding() to map params to inputs - 15 pts<br>
+Error route and 404 page, safe redirects - 10 pts<br>
+Deep linking: keep query params, restore scroll, good loading UX - 20 pts</td>
+            <td>90</td>
+            <td> - All routes functional with lazy <br>
+- AuthGuard<br>
+- withComponentInputBinding() uses in Search, PersonCard, MovieDetails, NotFound pages<br>
+- <br>
+- 404 page, redirect from profile, favourites to home for unauthorized and blocking navigation for authorized to auth routes<br>
+- Page MovieFilter save filters configuration and page in LS</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td>Testing</td>
+            <td>1. Unit tests for key components/services/pipes with edge cases - 50 pts<br>
+3. Mock HTTP, test interceptors and error states - 20 pts</td>
+            <td>70</td>
+            <td>1. All components, pipes and services has unit-tests.<br>
+3. interceptors, services, api-error-service</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td>TypeScript & Typing</td>
+            <td>strict: true without ignored errors in prod code - 20 pts<br>
+satisfies and utility types (Pick, Partial, Omit) where helpful - 5 pts</td>
+            <td>25</td>
+            <td>- "strict": true in tsconfig.json<br>
+- <br>
+- movie-store-service.ts: Partial is needed because localStorage may store an incomplete filters object—some fields may be missing, and then we can safely merge them with DEFAULT_FILTERS without type errors.</td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td>Architecture & Components</td>
+            <td>1.Feature-sliced structure (core/shared/ui/features) - 30 pts<br>
+2. Reusable components with clear inputs/outputs, content projection - 20 pts<br>
+3. Useful attribute or structural directives - 20 pts<br>
+4. DI patterns: injection tokens for config, clean boundaries - 10 pts<br>
+5. Well-designed pure pipes with strong typing - 10 pts</td>
+            <td>90</td>
+            <td>1. Project follows FSD architecture<br>
+2. shared/horizontal-slider with ng-content<br>
+3. shared/directives/RatingColorDirective<br>
+4. pages/movies/services/params-token<br>
+5. shared/pipes/vote-percent-pipe</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td>HTTP Layer</td>
+            <td>Typed HTTP calls via MovieService, interceptor app/core/interceptors;<br>
+toSignal bridge for observables - 25pts<br>
+Consistent error handling with user-friendly messages and safe retry policy - 20 pts<br>
+Cancel in-flight requests on navigation, avoid races - 20 pts<br>
+Local cache with invalidation - 15 pts </td>
+            <td>80</td>
+            <td> - All methods and requests are typed, interceptors are present,<br>
+- Error handling is in place, retry policy: retry({ count: 2, delay: 400 }) in fetchMovies().<br>
+- The currentReqSub is stored in the MovieStore. Before a new request, the previous one is canceled.<br>
+- We save filters in localStorage. We restore them on page load in the constructor.<br>
+Invalidation: when pressing Reset, the filters are updated and the local storage is overwritten.<br>
+Code: MovieService & MovieStore;</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td>Forms (Reactive Forms)</td>
+            <td>Complex form with custom validators (sync + async), clear error UX - 40 pts<br>
+Save draft and restore form state - 15 pts</td>
+            <td>55</td>
+            <td>features/forms<br>
+utils/validators<br>
+Registration form with custom password validators and an asynchronous validator to verify the existence of the entered login<br>
+Registration form data is saved in local storage until successful registration.</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>8</td>
+            <td>UI & Interaction</td>
+            <td>Responsive layout (BreakpointObserver or modern CSS) - 15 pts <br>
+Angular animations that improve UX - 10 pts <br>
+Good empty/loading/error states, skeletons - 20 pts</td>
+            <td>45</td>
+            <td> - Responsive layout and modern CSS: Flexbox, CSS-variables <br>
+- Angular animations: Loading genres list,<br>
+- empty-state, store.loading() и store.error()<br>
+Code: src/app/features/movie/movie-search-filter/movie-search-filter.ts/html</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>9</td>
+            <td>Content & Templates</td>
+            <td>1. Content projection with selectors, meaningful slots - 20 pts<br>
+2. ngTemplateOutlet, ng-container, new control flow to simplify DOM - 20 pts</td>
+            <td>40</td>
+            <td>1. forms (shared/ui/form-field)<br>
+2. card-lists, horizontal-slider, home/popular, home/trending, etc, people, movie-details and person-details sliders</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>10</td>
+            <td>Performance</td>
+            <td>Code-splitting and lazy loading for heavy parts - 20 pts<br>
+Image lazy loading and virtual scroll for large lists - 20 pts<br>
+Performance budget in README + measured Lighthouse gains - 20 pts</td>
+            <td>60</td>
+            <td>   - In app.routes.ts<br>
+- Lazy loading images in app/pages/home/slider-card/slider-card.html, app/pages/home/trailers/trailer-card/trailer-card.html. Virtual scroll on pages Popular, Now Playing, Upcoming, Top Rated, Search.<br>
+- Performance budget in README, measured Lighthouse gains -</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>11</td>
+            <td>Backend & Data Persistence</td>
+            <td>Your own backend (NestJS/Express) or Firebase (Firestore/Auth/Storage) with docs - 40 pts<br>
+Auth with JWT/OAuth2, protected routes - 20 pts</td>
+            <td>60</td>
+            <td>Authorization and favorites backend powered by NestJS with Prisma Postgres <br>
+https://github.com/NMakarevich/movie-db-backend<br>
+Documentation for the backend is in the README and at https://movie-db-backend.up.railway.app/doc</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>12</td>
+            <td>Accessibility</td>
+            <td>Keyboard navigation and focus management across main screens - 20 pts<br>
+Proper semantics and ARIA for forms, dialogs, menus - 20 pts</td>
+            <td>40</td>
+            <td>Code: app/features/movie/movie-search-filter/movie-search-filter.ts/html<br>
+- handleKeydown(): Esc - clears filters, Enter - starts filtering, Arrow keys - change page #.<br>
+app/shared/header/menu/burger/burger.ts<br>
+ARIA: app/features/movie/movie-search-filter/movie-search-filter.html, app/pages/home/movie-search/movie-search.html, app/shared/header/menu/burger/burger.html</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>13</td>
+            <td>DevOps, CI & Docs</td>
+            <td>CI pipeline: lint + unit tests + build + preview - 20 pts<br>
+Clear README with run steps, env variables, architecture diagram - 20 pts<br>
+Release notes/changelog and issue templates - 10 pts<br>
+Error monitoring (for example, Sentry) or remote logging - 10 pts</td>
+            <td>60</td>
+            <td>Pipelines in repo, Changelog and Readme<br>
+Error monitoring Sentry and remote logging in main.ts, sentry-error-handler, app.config.ts (https://innovation-development.sentry.io/)</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>865</td>
+            <td></td>
+        </tr>
+    </tbody>
+</table>
+</body>
+</html>
